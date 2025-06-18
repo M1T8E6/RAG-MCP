@@ -33,11 +33,11 @@ logger = logging.getLogger(__name__)
 
 server = Server("RAG MCP Server")
 
-# Global variable per i tools, sarà inizializzata con i parametri
+# Global variable for tools, will be initialized with parameters
 AVAILABLE_TOOLS = []
 
 
-def initialize_rag_tools(api_token: str, base_url: str = "https://your-service.com"):
+def initialize_rag_tools(api_token: str, base_url: str = "https://your-rag-service.com/api-path"):
     """Initializes RAG tools with the provided parameters"""
     global AVAILABLE_TOOLS
 
@@ -70,8 +70,8 @@ async def handle_list_tools() -> List[Tool]:
                         },
                         "base_url": {
                             "type": "string",
-                            "description": "Base URL for RAG API (optional, defaults to https://your-service.com)",
-                            "default": "https://your-service.com",
+                            "description": "Base URL for RAG API (optional, defaults to https://your-rag-service.com/api-path)",
+                            "default": "https://your-rag-service.com/api-path",
                         },
                     },
                     "required": ["api_token"],
@@ -100,7 +100,7 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
         # Handle configuration tool
         if name == "configure_rag":
             api_token = arguments.get("api_token")
-            base_url = arguments.get("base_url", "https://your-service.com")
+            base_url = arguments.get("base_url", "https://your-rag-service.com/api-path")
 
             if not api_token:
                 return [
@@ -219,10 +219,10 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
             return [TextContent(type="text", text=str(result))]
 
     except (ValueError, TypeError, KeyError) as e:
-        logger.error("Errors in tool parameters %s: %s", name, str(e), exc_info=True)
+        logger.error("Error in tool parameters %s: %s", name, str(e), exc_info=True)
         return [
             TextContent(
-                type="text", text=f"Errors in tool parameters '{name}': {str(e)}"
+                type="text", text=f"Error in tool parameters '{name}': {str(e)}"
             )
         ]
     except Exception as e:
@@ -273,7 +273,7 @@ async def handle_read_resource(uri: str) -> str:
 
             ## Configuration:
             1. Set RAG_API_TOKEN environment variable with your API token
-            2. Optionally set RAG_BASE_URL (defaults to https://your-service.com)
+            2. Optionally set RAG_BASE_URL (defaults to https://your-rag-service.com/api-path)
             3. Server runs in stdio mode for MCP integration
 
             ## Example usage:

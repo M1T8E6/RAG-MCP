@@ -9,30 +9,30 @@ from mcp.types import Resource, TextContent, Tool
 
 
 class BaseTool(ABC):
-    """Classe base per tutti i tools MCP"""
+    """Base class for all MCP tools"""
 
     @abstractmethod
     def get_name(self) -> str:
-        """Restituisce il nome del tool"""
+        """Returns the tool name"""
         pass
 
     @abstractmethod
     def get_description(self) -> str:
-        """Restituisce la descrizione del tool"""
+        """Returns the tool description"""
         pass
 
     @abstractmethod
     def get_input_schema(self) -> Dict[str, Any]:
-        """Restituisce lo schema JSON dei parametri di input"""
+        """Returns the JSON schema for input parameters"""
         pass
 
     @abstractmethod
     async def execute(self, **kwargs) -> List[TextContent]:
-        """Esegue il tool con i parametri forniti e restituisce TextContent"""
+        """Executes the tool with provided parameters and returns TextContent"""
         pass
 
     def to_mcp_tool(self) -> Tool:
-        """Converte il tool nel formato MCP Tool"""
+        """Converts the tool to MCP Tool format"""
         return Tool(
             name=self.get_name(),
             description=self.get_description(),
@@ -40,10 +40,10 @@ class BaseTool(ABC):
         )
 
     def get_resources(self) -> List[Resource]:
-        """Restituisce le risorse associate a questo tool"""
+        """Returns resources associated with this tool"""
         return []
 
     def handle_error(self, error: Exception, context: str = "") -> List[TextContent]:
-        """Gestisce gli errori in modo standardizzato"""
+        """Handles errors in a standardized way"""
         error_msg = f"Error in {context}: {str(error)}"
         return [TextContent(type="text", text=error_msg)]

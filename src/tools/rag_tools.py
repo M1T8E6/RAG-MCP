@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 class RagTool(BaseTool):
     """Tool for retrieving documents from a Vector Database"""
 
-    def __init__(self, api_token: str, base_url: str = "https://your-service.com"):
+    def __init__(self, api_token: str, base_url: str = "https://your-rag-service.com/api-path"):
         self.api_token = api_token
         self.base_url = base_url
-        self.endpoint = f"{base_url}/api/v1/rag/docs"
+        self.endpoint = f"{base_url}"
 
         self.notification_options = NotificationOptions(
             tools_changed=True,
@@ -44,7 +44,7 @@ class RagTool(BaseTool):
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "La domanda da porre al sistema RAG",
+                    "description": "The question to ask the RAG system",
                 }
             },
             "required": ["query"],
@@ -66,9 +66,6 @@ class RagTool(BaseTool):
 
             payload = {
                 "query": query,
-                "include_sources": True,
-                "max_tokens": 500,
-                "temperature": 0.1,
             }
 
             logger.info("Executing RAG docs query: %s", query)
@@ -101,7 +98,7 @@ class RagTool(BaseTool):
                             ),
                             TextContent(
                                 type="text",
-                                text=f"Errore nella chiamata RAG Docs (status {response.status})",
+                                text=f"Error in RAG Docs call (status {response.status})",
                             ),
                         ]
 
@@ -110,7 +107,7 @@ class RagTool(BaseTool):
             return [
                 TextContent(type="text", text="Request timeout"),
                 TextContent(
-                    type="text", text="Timeout nella chiamata al servizio RAG Docs"
+                    type="text", text="Timeout in RAG Docs service call"
                 ),
             ]
         except Exception as e:
@@ -118,6 +115,6 @@ class RagTool(BaseTool):
             return [
                 TextContent(
                     type="text",
-                    text=f"Errore imprevisto nella query RAG Docs: {str(e)}",
+                    text=f"Unexpected error in RAG Docs query: {str(e)}",
                 )
             ]
