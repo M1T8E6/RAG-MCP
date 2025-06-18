@@ -12,24 +12,7 @@ license = {text = "MIT"}
 authors = [
     {name = "Matteo", email = "andreoni.matteo@proton.me"}
 ]
-maintainers = [
-    {name = "Matteo", email = "andreoni.matteo@proton.me"}
-]
 keywords = ["mcp", "rag", "retrieval", "augmented", "generation", "llm", "ai"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-]
 
 dependencies = [
     "mcp>=1.9.2",
@@ -50,12 +33,6 @@ dev = [
 cli = [
     "mcp[cli]",
 ]
-
-[project.urls]
-Homepage = "https://github.com/yourusername/rag-mcp-server"
-Repository = "https://github.com/yourusername/rag-mcp-server"
-Documentation = "https://github.com/yourusername/rag-mcp-server#readme"
-Issues = "https://github.com/yourusername/rag-mcp-server/issues"
 
 [project.scripts]
 rag-mcp-server = "src.server:run_server"
