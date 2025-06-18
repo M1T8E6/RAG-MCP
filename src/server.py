@@ -8,19 +8,20 @@ import logging
 from typing import Any, Dict, List
 
 from dotenv import load_dotenv
-from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
+from mcp.types import Resource, TextContent, Tool
 
 # Import handling for both module and direct execution
 try:
-    from .tools.rag_tools import RagDocsTool
+    from .tools.rag_tools import RagTool
 except ImportError:
     # Fallback for direct execution
     import os
     import sys
+
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from tools.rag_tools import RagDocsTool
+    from tools.rag_tools import RagTool
 
 # Load environment variables from .env file
 load_dotenv()
@@ -35,30 +36,29 @@ server = Server("RAG MCP Server")
 # Global variable per i tools, sarà inizializzata con i parametri
 AVAILABLE_TOOLS = []
 
-def initialize_rag_tools(api_token: str, base_url: str = "https://api.ragnet-ai.com"):
-    """Inizializza i tools RAG con i parametri forniti"""
+
+def initialize_rag_tools(api_token: str, base_url: str = "https://your-service.com"):
+    """Initializes RAG tools with the provided parameters"""
     global AVAILABLE_TOOLS
-    
+
     if not api_token:
         logger.error("RAG_API_TOKEN parameter not provided")
         raise ValueError("RAG_API_TOKEN parameter is required")
 
-    AVAILABLE_TOOLS = [
-        RagDocsTool(api_token, base_url)
-    ]
-    
-    logger.info(f"RAG tools initialized with base URL: {base_url}")
+    AVAILABLE_TOOLS = [RagTool(api_token, base_url)]
+
+    logger.info("RAG tools initialized with base URL: %s", base_url)
     return AVAILABLE_TOOLS
 
 
 @server.list_tools()
-async def handle_list_tools() -> List[types.Tool]:
-    """Elenca i tool disponibili"""
+async def handle_list_tools() -> List[Tool]:
+    """Lists available tools"""
     logger.info("Listing available tools")
-    
+
     if not AVAILABLE_TOOLS:
         return [
-            types.Tool(
+            Tool(
                 name="configure_rag",
                 description="Configure RAG tools with API token and base URL",
                 inputSchema={
@@ -66,23 +66,23 @@ async def handle_list_tools() -> List[types.Tool]:
                     "properties": {
                         "api_token": {
                             "type": "string",
-                            "description": "RAG API token for authentication"
+                            "description": "RAG API token for authentication",
                         },
                         "base_url": {
                             "type": "string",
-                            "description": "Base URL for RAG API (optional, defaults to https://api.ragnet-ai.com)",
-                            "default": "https://api.ragnet-ai.com"
-                        }
+                            "description": "Base URL for RAG API (optional, defaults to https://your-service.com)",
+                            "default": "https://your-service.com",
+                        },
                     },
-                    "required": ["api_token"]
-                }
+                    "required": ["api_token"],
+                },
             )
         ]
-    
+
     tools = []
     for tool in AVAILABLE_TOOLS:
         tools.append(
-            types.Tool(
+            Tool(
                 name=tool.get_name(),
                 description=tool.get_description(),
                 inputSchema=tool.get_input_schema(),
@@ -93,20 +93,18 @@ async def handle_list_tools() -> List[types.Tool]:
 
 
 @server.call_tool()
-async def handle_call_tool(
-    name: str, arguments: Dict[str, Any]
-) -> List[types.TextContent]:
-    """Gestisce le chiamate ai tool"""
+async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+    """Handles tool calls"""
     logger.info("Handling tool call: %s with arguments: %s", name, arguments)
     try:
-        # Gestione tool di configurazione
+        # Handle configuration tool
         if name == "configure_rag":
             api_token = arguments.get("api_token")
-            base_url = arguments.get("base_url", "https://api.ragnet-ai.com")
-            
+            base_url = arguments.get("base_url", "https://your-service.com")
+
             if not api_token:
                 return [
-                    types.TextContent(
+                    TextContent(
                         type="text",
                         text="Error: api_token parameter is required for configuration",
                     )
@@ -115,29 +113,29 @@ async def handle_call_tool(
             try:
                 initialize_rag_tools(api_token, base_url)
                 return [
-                    types.TextContent(
+                    TextContent(
                         type="text",
                         text=f"RAG tools configured successfully with base URL: {base_url}",
                     )
                 ]
             except Exception as e:
                 return [
-                    types.TextContent(
+                    TextContent(
                         type="text",
                         text=f"Error configuring RAG tools: {str(e)}",
                     )
                 ]
 
-        # Verifica che i tools siano stati configurati
+        # Check if tools are configured
         if not AVAILABLE_TOOLS:
             return [
-                types.TextContent(
+                TextContent(
                     type="text",
                     text="RAG tools not configured. Please call 'configure_rag' tool first with your API token.",
                 )
             ]
 
-        # Trova il tool corrispondente
+        # Find the corresponding tool
         tool = None
         for t in AVAILABLE_TOOLS:
             if t.get_name() == name:
@@ -146,78 +144,84 @@ async def handle_call_tool(
 
         if not tool:
             return [
-                types.TextContent(
+                TextContent(
                     type="text",
                     text=f"Tool '{name}' not found. Available tools: {[t.get_name() for t in AVAILABLE_TOOLS]}",
                 )
             ]
 
-        # Esegui il tool
+        # Execute the tool
         result = await tool.execute(**arguments)
 
-        # Formatta il risultato
+        # Format the result
         if isinstance(result, dict):
             if result.get("success", False):
                 message = result.get("message", "Operation completed successfully")
                 details = []
 
-                # Gestione specifica per risultati RAG
+                # Specific handling for RAG results
                 if "data" in result:
                     rag_data = result["data"]
                     if isinstance(rag_data, dict):
-                        # Estrai la risposta RAG
+                        # Extract RAG response
                         if "answer" in rag_data:
-                            details.append(f"Risposta: {rag_data['answer']}")
+                            details.append(f"Response: {rag_data['answer']}")
                         elif "response" in rag_data:
-                            details.append(f"Risposta: {rag_data['response']}")
-                        
-                        # Estrai informazioni sui documenti sorgente
+                            details.append(f"Response: {rag_data['response']}")
+
+                        # Extract information about source documents
                         if "sources" in rag_data:
-                            details.append("Documenti sorgente:")
+                            details.append("Source Documents:")
                             for i, source in enumerate(rag_data["sources"], 1):
                                 if isinstance(source, dict):
                                     doc_info = f"  {i}. "
                                     if "document" in source:
-                                        doc_info += f"Documento: {source['document']}"
+                                        doc_info += f"Document: {source['document']}"
                                     if "score" in source:
                                         doc_info += f" (Score: {source['score']:.3f})"
                                     if "content" in source:
-                                        content = source['content'][:200] + "..." if len(source['content']) > 200 else source['content']
-                                        doc_info += f"\n     Contenuto: {content}"
+                                        content = (
+                                            source["content"][:200] + "..."
+                                            if len(source["content"]) > 200
+                                            else source["content"]
+                                        )
+                                        doc_info += f"\n     Content: {content}"
                                     details.append(doc_info)
                                 else:
                                     details.append(f"  {i}. {source}")
-                        
-                        # Se abbiamo solo i dati grezzi, mostrali
+
+                        # If we only have raw data, show it
                         if not details and rag_data:
-                            details.append(f"Dati RAG: {json.dumps(rag_data, indent=2, ensure_ascii=False)}")
+                            details.append(
+                                f"RAG Data: {json.dumps(rag_data, indent=2, ensure_ascii=False)}"
+                            )
 
                 if "query" in result:
                     details.append(f"Query: {result['query']}")
 
-                # Se non ci sono dettagli specifici RAG, usa il messaggio base
+                # If there are no specific RAG details, use the base message
                 if details:
                     full_message = "\n".join(details)
                 else:
                     full_message = message
 
-                return [types.TextContent(type="text", text=full_message)]
+                return [TextContent(type="text", text=full_message)]
             else:
                 error_message = result.get("error", "Unknown error")
                 user_message = result.get("message", "Operation failed")
                 return [
-                    types.TextContent(
+                    TextContent(
                         type="text",
                         text=f"{user_message}\n\nError details: {error_message}",
                     )
                 ]
         else:
-            return [types.TextContent(type="text", text=str(result))]
+            return [TextContent(type="text", text=str(result))]
 
     except (ValueError, TypeError, KeyError) as e:
         logger.error("Errors in tool parameters %s: %s", name, str(e), exc_info=True)
         return [
-            types.TextContent(
+            TextContent(
                 type="text", text=f"Errors in tool parameters '{name}': {str(e)}"
             )
         ]
@@ -229,7 +233,7 @@ async def handle_call_tool(
             exc_info=True,
         )
         return [
-            types.TextContent(
+            TextContent(
                 type="text",
                 text=f"Unexpected error occurred while executing tool '{name}': {str(e)}",
             )
@@ -237,11 +241,11 @@ async def handle_call_tool(
 
 
 @server.list_resources()
-async def handle_list_resources() -> List[types.Resource]:
-    """Elenca le risorse disponibili"""
+async def handle_list_resources() -> List[Resource]:
+    """Lists available resources"""
     logger.info("Listing available resources")
     return [
-        types.Resource(
+        Resource(
             uri="rag://docs",
             name="RAG MCP Server Documentation",
             description="Documentation for using the RAG MCP server",
@@ -252,7 +256,7 @@ async def handle_list_resources() -> List[types.Resource]:
 
 @server.read_resource()
 async def handle_read_resource(uri: str) -> str:
-    """Legge il contenuto di una risorsa"""
+    """Reads the content of a resource"""
     logger.info("Reading resource: %s", uri)
     if uri == "rag://docs":
         return """
@@ -269,7 +273,7 @@ async def handle_read_resource(uri: str) -> str:
 
             ## Configuration:
             1. Set RAG_API_TOKEN environment variable with your API token
-            2. Optionally set RAG_BASE_URL (defaults to https://api.ragnet-ai.com)
+            2. Optionally set RAG_BASE_URL (defaults to https://your-service.com)
             3. Server runs in stdio mode for MCP integration
 
             ## Example usage:
@@ -282,11 +286,11 @@ async def handle_read_resource(uri: str) -> str:
 
 
 async def main():
-    """Funzione principale per avviare il server"""
+    """Main function to start the server"""
     try:
         logger.info("Starting RAG MCP server")
-        
-        # Modalità stdio per MCP
+
+        # STDIO mode for MCP
         logger.info("Starting STDIO server")
         async with stdio_server() as (read_stream, write_stream):
             await server.run(
